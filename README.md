@@ -1,26 +1,28 @@
-# README
+# README (Minimal but Context-Preserving)
 
-## Cache Location
+## Shared Cache
 
-Hugging Face Hub cache is stored here:
+All Hugging Face models are stored in a shared cache:
 
 ```
 HF_HOME=$HOME/hf-cache
-HF_HUB_CACHE=$HF_HOME/hub
+HF_HUB_CACHE=$HOME/hf-cache/hub
 ```
 
-Add this to `~/.bashrc`:
+Add to your shell:
 
 ```bash
 export HF_HOME="$HOME/hf-cache"
 export HF_HUB_CACHE="$HOME/hf-cache/hub"
 ```
 
+This ensures all projects reuse the same downloaded models.
+
 ---
 
-## Cache Commands (official)
+## Cache Management
 
-List cache:
+List all cached models:
 
 ```bash
 task hf:ls
@@ -32,7 +34,7 @@ Prune unreferenced revisions:
 task hf:prune
 ```
 
-Legacy CLI scan:
+Legacy detailed scan:
 
 ```bash
 task hf:scan
@@ -40,9 +42,18 @@ task hf:scan
 
 ---
 
-## Project Model Linking
+## Adding a Model to This Project
 
-Link a cached model snapshot into `./models/`:
+Models **are not downloaded into this repo**.
+They live in the shared cache, and the project only “links” to them.
+
+1. Download (if not already cached):
+
+```bash
+uvx hf download ORG/REPO
+```
+
+2. Link the snapshot into this project:
 
 ```bash
 task hf:link \
@@ -50,14 +61,28 @@ task hf:link \
   DST="REPO"
 ```
 
-Remove broken links:
+The model will appear under:
+
+```
+./models/REPO
+```
+
+Links are safe to delete anytime:
 
 ```bash
 task hf:clean-links
 ```
 
+`models/` is ignored by Git.
+
 ---
 
-## Git Ignore
+## Purpose
 
-`models/` is ignored and not committed.
+This project provides:
+
+* A unified Hugging Face cache
+* Commands to inspect and clean it
+* A mechanism to **add models to any project without duplicating storage**
+
+Use this repository whenever you want to **add, link, or manage HF models** reproducibly across workspaces.
