@@ -1,1 +1,37 @@
-models/
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+*.egg-info/
+.pytest_cache/
+
+# Virtual environment
+.venv/
+env/
+venv/
+# uv installs to a virtual environment or current environment based on context,
+# so the specific path /usr/bin/uv is not a standard .gitignore entry for project-level.
+# If uv were to create a specific project-level cache/config, it would be added here.
+
+# Editor/IDE files
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+
+# Build artifacts
+build/
+dist/
+*.egg
+
+# Hugging Face cache
+hf-cache/
+
+# Output files from examples
+out_diffuser.png
+out_transformer.txt
+
+# uv specific (if any global cache for project)
+.uv/

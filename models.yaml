@@ -8,3 +8,7 @@ models:
 
   - org: QuantStack
     repo: Wan2.2-Animate-14B-GGUF
+
+  - org: jayn7
+    repo: Z-Image-Turbo-GGUF
+    file: z_image_turbo-Q4_K_S.gguf
