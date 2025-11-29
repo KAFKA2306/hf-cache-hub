@@ -7,7 +7,7 @@ vars:
 tasks:
 
   hf:ls:
-    desc: "キャッシュ一覧（公式）"
+    desc: "キャッシュ一覧（公式 CLI）"
     env:
       HF_HOME: "{{.HF_HOME}}"
       HF_HUB_CACHE: "{{.HF_HUB_CACHE}}"
@@ -15,7 +15,7 @@ tasks:
       - uvx hf cache ls --revisions --format table
 
   hf:prune:
-    desc: "不要なキャッシュ削除（公式）"
+    desc: "不要なキャッシュの削除（公式 CLI）"
     env:
       HF_HOME: "{{.HF_HOME}}"
       HF_HUB_CACHE: "{{.HF_HUB_CACHE}}"
@@ -24,7 +24,7 @@ tasks:
       - uvx hf cache prune --yes
 
   hf:scan:
-    desc: "旧CLI互換のスキャン"
+    desc: "旧 CLI の互換キャッシュスキャン（scan-cache）"
     env:
       HF_HOME: "{{.HF_HOME}}"
       HF_HUB_CACHE: "{{.HF_HUB_CACHE}}"
@@ -32,15 +32,15 @@ tasks:
       - uv run huggingface-cli scan-cache
 
   hf:link:
-    desc: "共有キャッシュのモデルを models/ に手動リンク"
+    desc: "共有キャッシュにあるモデルを ./models 内にシンボリックリンクで見える化"
     vars:
-      SRC: "{{.SRC}}"   # 実体（スナップショットパス）
-      DST: "{{.DST}}"   # models/ 以下の名前
+      SRC: "{{.SRC}}"  # 実体パス（HF_HUB_CACHE 内の snapshot など）
+      DST: "{{.DST}}"  # models/ 配下のリンク名
     cmds:
       - mkdir -p models
       - ln -sf "{{.SRC}}" "models/{{.DST}}"
 
   hf:clean-links:
-    desc: "壊れリンク削除"
+    desc: "壊れたシンボリックリンクを削除"
     cmds:
       - find models -xtype l -delete
