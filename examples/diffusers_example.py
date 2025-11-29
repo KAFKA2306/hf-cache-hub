@@ -1,7 +1,7 @@
 import torch
-from diffusers import ZImagePipeline
+from diffusers import QwenImagePipeline
 
-pipe = ZImagePipeline.from_pretrained(
+pipe = QwenImagePipeline.from_pretrained(
     "Tongyi-MAI/Z-Image-Turbo",
     torch_dtype=torch.bfloat16,
 )

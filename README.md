@@ -1,57 +1,28 @@
-# Hugging Face モデル管理
+## キャッシュ場所（公式）
+HF_HOME=$HOME/hf-cache
+HF_HUB_CACHE=$HF_HOME/hub
+すべての Hugging Face Hub キャッシュはここに集約されます。
 
-本プロジェクトは `Taskfile.yaml` を使用して、Hugging Face モデルのキャッシュ管理を自動化します。
-環境変数が未設定の場合でも、`$HOME/hf-cache` をキャッシュディレクトリとして自動的に利用します。
+## キャッシュ操作（公式 CLI）
+- 一覧  
+  `task hf:ls`
+- 不要分の削除  
+  `task hf:prune`
+- 旧 CLI の互換スキャン  
+  `task hf:scan`
 
----
-
-## 使い方
-
-### 1. 共有キャッシュの場所を確認する
-
-以下のコマンドで、現在有効なキャッシュディレクトリのパスを確認できます。
-
-```bash
-task hf:env
-```
-
-`HF_HOME` や `HF_HUB_CACHE` といった環境変数を事前に設定していない場合、デフォルトで `$HOME/hf-cache` および `$HOME/hf-cache/hub` が使用されます。
-
-### 2. モデルを共有キャッシュに事前取得する
-
-モデルをダウンロードするには `hf:prefetch` タスクを実行します。
+## プロジェクトでのモデルの使い方（方式③）
+``models/`` に symlink を貼ることでプロジェクトに“見える化”します。
 
 ```bash
-# 指定したモデルをダウンロード
-task hf:prefetch REPO="Tongyi-MAI/Z-Image-Turbo"
-
-# デフォルトのモデル (org/model-name) をダウンロード
-task hf:prefetch
+task hf:link SRC="$HF_HUB_CACHE/models--ORG--NAME/snapshots/<hash>" DST="NAME"
 ```
 
-ダウンロードされたモデルは共有キャッシュに保存され、すべてのプロジェクトから参照可能になります。
-
-### 3. キャッシュの状態を検査する
-
-キャッシュが正常か、またどのモデルが保存されているかを確認するには `hf:scan` タスクを使用します。
+壊れリンク削除：
 
 ```bash
-task hf:scan
+task hf:clean-links
 ```
 
----
+これにより、実体は共有キャッシュ、プロジェクトは models/ だけを参照します。
 
-## コードからの利用
-
-コード側では特別な設定は不要です。
-`from_pretrained` を通常通り呼び出すだけで、`Taskfile.yaml` が管理する共有キャッシュからモデルが自動的に読み込まれます。
-
-```python
-# 例: Diffusers
-from diffusers import ZImagePipeline
-pipe = ZImagePipeline.from_pretrained("Tongyi-MAI/Z-Image-Turbo")
-
-# 例: Transformers
-from transformers import AutoModelForCausalLM
-model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen2.5-32B-Instruct")
-```

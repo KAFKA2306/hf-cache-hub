@@ -1,34 +1,46 @@
 version: "3"
 
 vars:
-  HF_HOME: '{{ coalesce (env "HF_HOME") (print (env "HOME") "/hf-cache") }}'
-  HF_HUB_CACHE: '{{ coalesce (env "HF_HUB_CACHE") (print .HF_HOME "/hub") }}'
+  HF_HOME: "{{.HOME}}/hf-cache"
+  HF_HUB_CACHE: "{{.HF_HOME}}/hub"
 
 tasks:
-  hf:env:
-    desc: "共通キャッシュの場所を表示"
-    cmds:
-      - echo "HF_HOME={{.HF_HOME}}"
-      - echo "HF_HUB_CACHE={{.HF_HUB_CACHE}}"
 
-  hf:prefetch:
-    desc: "モデルを共有 HF_HUB_CACHE にダウンロード（デフォルト: org/model-name）"
+  hf:ls:
+    desc: "キャッシュ一覧（公式）"
     env:
-      HF_HOME: '{{.HF_HOME}}'
-      HF_HUB_CACHE: '{{.HF_HUB_CACHE}}'
-    vars:
-      REPO: '{{ default "org/model-name" .REPO }}'
-      DEST: '{{ printf "%s/models--%s" .HF_HUB_CACHE (replace .REPO "/" "--") }}'
+      HF_HOME: "{{.HF_HOME}}"
+      HF_HUB_CACHE: "{{.HF_HUB_CACHE}}"
     cmds:
-      - mkdir -p "{{.HF_HUB_CACHE}}"
-      - >
-        uv run huggingface-cli download {{.REPO}}
-        --local-dir "{{.DEST}}"
+      - uvx hf cache ls --revisions --format table
+
+  hf:prune:
+    desc: "不要なキャッシュ削除（公式）"
+    env:
+      HF_HOME: "{{.HF_HOME}}"
+      HF_HUB_CACHE: "{{.HF_HUB_CACHE}}"
+    cmds:
+      - uvx hf cache prune --dry-run
+      - uvx hf cache prune --yes
 
   hf:scan:
-    desc: "キャッシュ状態を表示"
+    desc: "旧CLI互換のスキャン"
     env:
-      HF_HOME: '{{.HF_HOME}}'
-      HF_HUB_CACHE: '{{.HF_HUB_CACHE}}'
+      HF_HOME: "{{.HF_HOME}}"
+      HF_HUB_CACHE: "{{.HF_HUB_CACHE}}"
     cmds:
       - uv run huggingface-cli scan-cache
+
+  hf:link:
+    desc: "共有キャッシュのモデルを models/ に手動リンク"
+    vars:
+      SRC: "{{.SRC}}"   # 実体（スナップショットパス）
+      DST: "{{.DST}}"   # models/ 以下の名前
+    cmds:
+      - mkdir -p models
+      - ln -sf "{{.SRC}}" "models/{{.DST}}"
+
+  hf:clean-links:
+    desc: "壊れリンク削除"
+    cmds:
+      - find models -xtype l -delete
