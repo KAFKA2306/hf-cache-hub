@@ -55,3 +55,4 @@ pipe = ZImagePipeline.from_pretrained("Tongyi-MAI/Z-Image-Turbo")
 from transformers import AutoModelForCausalLM
 model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen2.5-32B-Instruct")
 ```# hf-cache-hub
+# hf-cache-hub
