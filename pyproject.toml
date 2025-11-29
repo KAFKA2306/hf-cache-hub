@@ -5,24 +5,20 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "huggingface-project-utils"
 version = "0.1.0"
-authors = [
-  { name="Your Name", email="you@example.com" },
-]
+authors = [{ name = "Your Name", email = "you@example.com" }]
 description = "A project demonstrating Hugging Face model management."
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
 ]
 dependencies = [
-    "torch",
-    "diffusers",
-    "transformers",
-    "huggingface-hub",
-    "tomlkit",
-    "llama-cpp-python",
+  "torch",
+  "diffusers @ git+https://github.com/huggingface/diffusers",
+  "transformers",
+  "huggingface-hub",
 ]
 
 [project.urls]

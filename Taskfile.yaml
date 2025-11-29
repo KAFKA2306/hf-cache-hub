@@ -1,35 +1,53 @@
 version: "3"
 
 vars:
-  HF_HOME: "{{.HOME}}/hf-cache"
-  HF_HUB_CACHE: "{{.HF_HOME}}/hub"
+  HF_HOME: '{{coalesce (env "HF_HOME") (print (env "HOME") "/hf-cache")}}'
+  HF_HUB_CACHE: '{{coalesce (env "HF_HUB_CACHE") (print .HF_HOME "/hub")}}'
 
 tasks:
+  hf:prefetch:
+    desc: "Prefetch a model into shared HF cache"
+    env:
+      HF_HOME: '{{.HF_HOME}}'
+      HF_HUB_CACHE: '{{.HF_HUB_CACHE}}'
+    cmds:
+      - mkdir -p "{{.HF_HUB_CACHE}}"
+      - >
+        uv run huggingface-cli download {{.REPO | default "Tongyi-MAI/Z-Image-Turbo"}}
+        --local-dir "{{.HF_HUB_CACHE}}/models--{{.REPO | default "Tongyi-MAI--Z-Image-Turbo" | replace "/" "--"}}"
+
+  hf:scan:
+    desc: "Show cache status"
+    env:
+      HF_HOME: '{{.HF_HOME}}'
+      HF_HUB_CACHE: '{{.HF_HUB_CACHE}}'
+    cmds:
+      - uv run huggingface-cli scan-cache
+
+  hf:clean:
+    desc: "Clean unused/duplicate cache"
+    env:
+      HF_HOME: '{{.HF_HOME}}'
+      HF_HUB_CACHE: '{{.HF_HUB_CACHE}}'
+    cmds:
+      - uv run huggingface-cli delete-cache
 
   hf:ls:
     desc: "キャッシュ一覧（公式 CLI）"
     env:
-      HF_HOME: "{{.HF_HOME}}"
-      HF_HUB_CACHE: "{{.HF_HUB_CACHE}}"
+      HF_HOME: '{{.HF_HOME}}'
+      HF_HUB_CACHE: '{{.HF_HUB_CACHE}}'
     cmds:
       - uvx hf cache ls --revisions --format table
 
   hf:prune:
     desc: "不要なキャッシュの削除（公式 CLI）"
     env:
-      HF_HOME: "{{.HF_HOME}}"
-      HF_HUB_CACHE: "{{.HF_HUB_CACHE}}"
+      HF_HOME: '{{.HF_HOME}}'
+      HF_HUB_CACHE: '{{.HF_HUB_CACHE}}'
     cmds:
       - uvx hf cache prune --dry-run
       - uvx hf cache prune --yes
-
-  hf:scan:
-    desc: "旧 CLI の互換キャッシュスキャン（scan-cache）"
-    env:
-      HF_HOME: "{{.HF_HOME}}"
-      HF_HUB_CACHE: "{{.HF_HUB_CACHE}}"
-    cmds:
-      - uv run huggingface-cli scan-cache
 
   hf:link:
     desc: "共有キャッシュにあるモデルを ./models 内にシンボリックリンクで見える化"

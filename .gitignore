@@ -3,35 +3,31 @@ __pycache__/
 *.pyc
 *.pyd
 *.pyo
-*.egg-info/
-.pytest_cache/
 
-# Virtual environment
+# Virtual environments
 .venv/
-env/
 venv/
-# uv installs to a virtual environment or current environment based on context,
-# so the specific path /usr/bin/uv is not a standard .gitignore entry for project-level.
-# If uv were to create a specific project-level cache/config, it would be added here.
+env/
 
-# Editor/IDE files
+# IDE-specific files
 .idea/
 .vscode/
 *.swp
-*~
-.DS_Store
+*.bak
+*.swo
 
-# Build artifacts
-build/
-dist/
-*.egg
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# MyPy cache
+.mypy_cache/
+
+# uv cache
+.uv/
+uv.lock 
 
 # Hugging Face cache
 hf-cache/
-
-# Output files from examples
-out_diffuser.png
-out_transformer.txt
-
-# uv specific (if any global cache for project)
-.uv/
+huggingface*
+*.png
