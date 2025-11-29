@@ -44,3 +44,69 @@ tasks:
     desc: "壊れたシンボリックリンクを削除"
     cmds:
       - find models -xtype l -delete
+
+  hf:auto-link:
+    desc: "models.yaml に基づいてモデルを自動リンク"
+    vars:
+      CONFIG: "models.yaml"
+    cmds:
+      - mkdir -p models
+      - |
+        python3 <<'EOF'
+        import os, yaml, subprocess, json, pathlib
+
+        HF_CACHE = os.path.expandvars("$HF_HUB_CACHE")
+
+        with open("models.yaml") as f:
+            config = yaml.safe_load(f)
+
+        for m in config.get("models", []):
+            org = m["org"]
+            repo = m["repo"]
+            hub_dir = f"models--{org}--{repo}"
+            hub_path = pathlib.Path(HF_CACHE) / hub_dir / "snapshots"
+
+            if not hub_path.exists():
+                print(f"[skip] not downloaded: {org}/{repo}")
+                continue
+
+            # 最新snapshotを一つ選ぶ
+            snapshots = sorted(hub_path.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True)
+            if not snapshots:
+                print(f"[skip] no snapshots: {org}/{repo}")
+                continue
+
+            snap = snapshots[0]  # 最新
+            dst = pathlib.Path("models") / repo
+
+            # symlink 作成
+            if dst.exists() or dst.is_symlink():
+                dst.unlink()
+
+            dst.symlink_to(snap, target_is_directory=True)
+            print(f"[link] {repo} -> {snap}")
+        EOF
+
+  hf:auto-download:
+    desc: "models.yaml に基づいて必要モデルをすべてダウンロード"
+    cmds:
+      - |
+        python3 <<'EOF'
+        import os, yaml, subprocess
+
+        with open("models.yaml") as f:
+            config = yaml.safe_load(f)
+
+        for m in config.get("models", []):
+            org = m["org"]
+            repo = m["repo"]
+            model = f"{org}/{repo}"
+            print(f"[download] {model}")
+            subprocess.run(["uvx", "hf", "download", model], check=False)
+        EOF
+
+  hf:sync:
+    desc: "models.yaml → 自動ダウンロード → 自動リンク（フル同期）"
+    cmds:
+      - task: hf:auto-download
+      - task: hf:auto-link

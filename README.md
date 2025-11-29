@@ -1,88 +1,81 @@
-# README (Minimal but Context-Preserving)
+# README (Minimal + Automatic Model Add)
 
 ## Shared Cache
 
-All Hugging Face models are stored in a shared cache:
-
 ```
 HF_HOME=$HOME/hf-cache
-HF_HUB_CACHE=$HOME/hf-cache/hub
+HF_HUB_CACHE=$HF_HOME/hub
 ```
 
-Add to your shell:
+Add to `~/.bashrc`:
 
 ```bash
 export HF_HOME="$HOME/hf-cache"
-export HF_HUB_CACHE="$HOME/hf-cache/hub"
-```
-
-This ensures all projects reuse the same downloaded models.
-
----
-
-## Cache Management
-
-List all cached models:
-
-```bash
-task hf:ls
-```
-
-Prune unreferenced revisions:
-
-```bash
-task hf:prune
-```
-
-Legacy detailed scan:
-
-```bash
-task hf:scan
+export HF_HUB_CACHE="$HF_HOME/hub"
 ```
 
 ---
 
-## Adding a Model to This Project
+## Add Models
 
-Models **are not downloaded into this repo**.
-They live in the shared cache, and the project only “links” to them.
+List desired models in:
 
-1. Download (if not already cached):
+**models.yaml**
+
+```yaml
+models:
+  - org: mobiuslabsgmbh
+    repo: faster-whisper-large-v3-turbo
+```
+
+---
+
+## Download & Link (Automatic)
+
+Download all models:
 
 ```bash
-uvx hf download ORG/REPO
+task hf:auto-download
 ```
 
-2. Link the snapshot into this project:
+Link them into this project:
 
 ```bash
-task hf:link \
-  SRC="$HF_HUB_CACHE/models--ORG--REPO/snapshots/<hash>" \
-  DST="REPO"
+task hf:auto-link
 ```
 
-The model will appear under:
-
-```
-./models/REPO
-```
-
-Links are safe to delete anytime:
+Or run full sync:
 
 ```bash
-task hf:clean-links
+task hf:sync
+```
+
+This creates:
+
+```
+models/REPO -> $HF_HUB_CACHE/models--ORG--REPO/snapshots/<hash>
 ```
 
 `models/` is ignored by Git.
 
 ---
 
-## Purpose
+## Cache Management
 
-This project provides:
+List:
 
-* A unified Hugging Face cache
-* Commands to inspect and clean it
-* A mechanism to **add models to any project without duplicating storage**
+```bash
+task hf:ls
+```
 
-Use this repository whenever you want to **add, link, or manage HF models** reproducibly across workspaces.
+Prune:
+
+```bash
+task hf:prune
+```
+
+Legacy scan:
+
+```bash
+task hf:scan
+```

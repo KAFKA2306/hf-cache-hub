@@ -1,0 +1,10 @@
+# 追加したいモデルをここに列挙するだけ
+models:
+  - org: mobiuslabsgmbh
+    repo: faster-whisper-large-v3-turbo
+
+  - org: Tongyi-MAI
+    repo: Z-Image-Turbo
+
+  - org: QuantStack
+    repo: Wan2.2-Animate-14B-GGUF
