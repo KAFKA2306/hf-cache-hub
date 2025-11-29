@@ -1,42 +1,48 @@
-# Hugging Face Cache Hub
+# README
 
-## キャッシュ場所（公式仕様）
-キャッシュの実体は以下に保存されます。
+## Cache Location
 
-- `$HF_HOME = $HOME/hf-cache`
-- `$HF_HUB_CACHE = $HOME/hf-cache/hub`
+Hugging Face Hub cache is stored here:
 
-`~/.bashrc` に以下を追加してください。
+```
+HF_HOME=$HOME/hf-cache
+HF_HUB_CACHE=$HF_HOME/hub
+```
+
+Add this to `~/.bashrc`:
 
 ```bash
 export HF_HOME="$HOME/hf-cache"
 export HF_HUB_CACHE="$HOME/hf-cache/hub"
 ```
 
-## キャッシュ操作（公式 CLI）
+---
 
-### 一覧
+## Cache Commands (official)
+
+List cache:
 
 ```bash
 task hf:ls
 ```
 
-### 不要リビジョン削除
+Prune unreferenced revisions:
 
 ```bash
 task hf:prune
 ```
 
-### 旧 CLI 互換（scan-cache）
+Legacy CLI scan:
 
 ```bash
 task hf:scan
 ```
 
-## プロジェクトでのモデル見える化（方式③）
+---
 
-共有キャッシュ内のモデル実体を、各プロジェクトの `models/` に
-**シンボリックリンクで見える化**できます。
+## Project Model Linking
+
+Link a cached model snapshot into `./models/`:
 
 ```bash
 task hf:link \
@@ -44,10 +50,14 @@ task hf:link \
   DST="REPO"
 ```
 
-壊れたリンク削除：
+Remove broken links:
 
 ```bash
 task hf:clean-links
 ```
 
-※ `models/` は `.gitignore` 済みのためリポジトリには含まれません。
+---
+
+## Git Ignore
+
+`models/` is ignored and not committed.
