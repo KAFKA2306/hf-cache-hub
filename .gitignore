@@ -30,4 +30,4 @@ uv.lock
 # Hugging Face cache
 hf-cache/
 huggingface*
-*.png
+*.pngmodels/
