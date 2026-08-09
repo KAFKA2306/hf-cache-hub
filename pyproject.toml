@@ -5,13 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "huggingface-project-utils"
 version = "0.1.0"
-authors = [{ name = "Your Name", email = "you@example.com" }]
-description = "A project demonstrating Hugging Face model management."
+authors = [{ name = "KAFKA2306" }]
+description = "Revision-pinned Hugging Face shared-cache utilities."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = [
   "Programming Language :: Python :: 3",
-  "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
 ]
 dependencies = [
@@ -19,8 +18,9 @@ dependencies = [
   "diffusers @ git+https://github.com/huggingface/diffusers",
   "transformers",
   "huggingface-hub",
+  "PyYAML>=6.0",
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/your-username/your-repo"
-"Bug Tracker" = "https://github.com/your-username/your-repo/issues"
+"Homepage" = "https://github.com/KAFKA2306/hf-cache-hub"
+"Bug Tracker" = "https://github.com/KAFKA2306/hf-cache-hub/issues"
