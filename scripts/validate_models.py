@@ -14,6 +14,16 @@ import yaml
 
 MODEL_PART_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
+ALLOWED_FIELDS = {
+    "org",
+    "repo",
+    "revision",
+    "link_name",
+    "purpose",
+    "access",
+    "license_url",
+    "model_card_url",
+}
 
 
 def _issue(code: str, message: str, index: int | None = None) -> dict[str, Any]:
@@ -109,8 +119,7 @@ def validate_registry(data: Any, *, require_revision: bool = False) -> dict[str,
                 normalized_entry["revision"] = revision
             normalized.append(normalized_entry)
 
-        allowed = {"org", "repo", "revision", "link_name"}
-        unknown = sorted(set(raw) - allowed)
+        unknown = sorted(set(raw) - ALLOWED_FIELDS)
         if unknown:
             errors.append(
                 _issue(
