@@ -32,8 +32,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install validator dependency
-        run: python -m pip install --disable-pip-version-check PyYAML==6.0.2
+      - name: Install test dependencies
+        run: python -m pip install --disable-pip-version-check "PyYAML>=6.0,<7" "huggingface-hub>=1.0,<2"
       - name: Compile validator and tests
         run: python -m py_compile scripts/validate_models.py tests/test_validate_models.py
       - name: Run unit tests
