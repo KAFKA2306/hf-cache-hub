@@ -1,0 +1,49 @@
+name: Model registry integrity
+
+on:
+  pull_request:
+    paths:
+      - "models.yaml"
+      - "scripts/validate_models.py"
+      - "tests/test_validate_models.py"
+      - ".github/workflows/model-registry-integrity.yml"
+  push:
+    branches: [main]
+    paths:
+      - "models.yaml"
+      - "scripts/validate_models.py"
+      - "tests/test_validate_models.py"
+      - ".github/workflows/model-registry-integrity.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: model-registry-integrity-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install validator dependency
+        run: python -m pip install --disable-pip-version-check PyYAML==6.0.2
+      - name: Compile validator and tests
+        run: python -m py_compile scripts/validate_models.py tests/test_validate_models.py
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Validate registry
+        run: python scripts/validate_models.py models.yaml --report build/model-registry-audit.json
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-registry-audit
+          path: build/model-registry-audit.json
+          if-no-files-found: error
+          retention-days: 30
