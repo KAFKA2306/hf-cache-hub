@@ -1,0 +1,102 @@
+{
+  "schema": "hf-cache-hub.team-cache-prospects.v1",
+  "generated_at": "2026-08-11T01:14:22Z",
+  "policy": {
+    "qualification": "Public evidence only. Inclusion means candidate for research/outreach, not confirmed need or purchase intent.",
+    "outreach_default": "RESEARCHED_NOT_CONTACTED",
+    "personal_data": false,
+    "sales_analytics_contains_tokens_or_model_content": false
+  },
+  "prospects": [
+    {
+      "id": "elyza",
+      "organization": "株式会社ELYZA",
+      "segment": "AI_MODEL_DEVELOPER",
+      "public_fact": "独自LLMの研究開発と企業向けLLM活用支援を公式サイトで案内している。",
+      "evidence_url": "https://elyza.ai/",
+      "outreach_status": "RESEARCHED_NOT_CONTACTED",
+      "outreach_evidence": []
+    },
+    {
+      "id": "preferred-networks",
+      "organization": "株式会社Preferred Networks",
+      "segment": "AI_MODEL_DEVELOPER",
+      "public_fact": "国産生成AI基盤モデルPLaMoの開発・提供を公式ニュースで案内している。",
+      "evidence_url": "https://www.preferred.jp/ja/news/tag/genai",
+      "outreach_status": "RESEARCHED_NOT_CONTACTED",
+      "outreach_evidence": []
+    },
+    {
+      "id": "abeja",
+      "organization": "株式会社ABEJA",
+      "segment": "AI_MODEL_DEVELOPER",
+      "public_fact": "GENIACでLLMとAIエージェントを構築した成果を公式発表している。",
+      "evidence_url": "https://www.abejainc.com/news/20260327/1",
+      "outreach_status": "RESEARCHED_NOT_CONTACTED",
+      "outreach_evidence": []
+    },
+    {
+      "id": "exawizards",
+      "organization": "株式会社エクサウィザーズ",
+      "segment": "AI_SOLUTION_DEVELOPER",
+      "public_fact": "exaBase Studioで複数LLMを扱う生成AIサービス開発基盤を公式提供している。",
+      "evidence_url": "https://exawizards.com/exabase/studio/",
+      "outreach_status": "RESEARCHED_NOT_CONTACTED",
+      "outreach_evidence": []
+    },
+    {
+      "id": "pksha-technology",
+      "organization": "株式会社PKSHA Technology",
+      "segment": "AI_SOLUTION_DEVELOPER",
+      "public_fact": "生成AIを利用するAI FAQ/対話サービスを公式提供している。",
+      "evidence_url": "https://www.pkshatech.com/news/20260302/",
+      "outreach_status": "RESEARCHED_NOT_CONTACTED",
+      "outreach_evidence": []
+    },
+    {
+      "id": "sakana-ai",
+      "organization": "Sakana AI株式会社",
+      "segment": "AI_MODEL_RESEARCH",
+      "public_fact": "GPU向け疎行列カーネルを含むTransformer研究成果とコードを公式公開している。",
+      "evidence_url": "https://sakana.ai/twell/",
+      "outreach_status": "RESEARCHED_NOT_CONTACTED",
+      "outreach_evidence": []
+    },
+    {
+      "id": "stockmark",
+      "organization": "ストックマーク株式会社",
+      "segment": "AI_MODEL_DEVELOPER",
+      "public_fact": "Stockmark LLM/VLMを研究開発し、公開モデルを公式サイトで案内している。",
+      "evidence_url": "https://stockmark.co.jp/r-and-d/stockmark-llm/",
+      "outreach_status": "RESEARCHED_NOT_CONTACTED",
+      "outreach_evidence": []
+    },
+    {
+      "id": "karakuri",
+      "organization": "カラクリ株式会社",
+      "segment": "AI_MODEL_DEVELOPER",
+      "public_fact": "国産オープンモデルKARAKURI LMシリーズの研究開発を公式サイトで案内している。",
+      "evidence_url": "https://about.karakuri.ai/rd",
+      "outreach_status": "RESEARCHED_NOT_CONTACTED",
+      "outreach_evidence": []
+    },
+    {
+      "id": "lightblue",
+      "organization": "株式会社Lightblue",
+      "segment": "AI_SOLUTION_DEVELOPER",
+      "public_fact": "大規模言語モデル開発と生成AIエージェントサービスを公式サイトで案内している。",
+      "evidence_url": "https://www.lightblue-tech.com/",
+      "outreach_status": "RESEARCHED_NOT_CONTACTED",
+      "outreach_evidence": []
+    },
+    {
+      "id": "matsuo-iwasawa-lab",
+      "organization": "東京大学 松尾・岩澤研究室",
+      "segment": "AI_MODEL_RESEARCH",
+      "public_fact": "LLM開発コンペで複数チームがGPU計算資源を使いモデル開発を行ったことを公式公開している。",
+      "evidence_url": "https://weblab.t.u-tokyo.ac.jp/lm-compe-2025/",
+      "outreach_status": "RESEARCHED_NOT_CONTACTED",
+      "outreach_evidence": []
+    }
+  ]
+}
