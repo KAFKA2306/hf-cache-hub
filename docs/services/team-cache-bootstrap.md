@@ -34,6 +34,12 @@ credentialは `models.yaml`、`cache-manifest.json`、Git、営業analyticsへ�
 5. 両manifestの `revision`、`resolved_commit`、`snapshot` が一致することを確認する。
 6. workstation count、model count、cache hit/miss、cache bytesを観測値として記録する。duplicate bytes avoidedは実測できた場合だけ記録する。
 
+## Prospecting registry
+
+`data/team-cache-prospects.json` は、AI/LLMの研究開発またはAIサービス開発を各組織の公式ページで確認できた候補だけを保存します。登録は営業実績を意味しません。初期状態は全件 `RESEARCHED_NOT_CONTACTED` とし、公開情報だけから「共有cacheが必要」「購入意向がある」「有効商談である」と推定しません。
+
+提案を実施した場合も、組織ID、状態、日付、公開可能な証拠だけを記録し、担当者氏名、個人メール、Hugging Face token、model内容は営業台帳へ保存しません。Issue #2の「直接提案10件」は、実際の送信・面談等を証明できる証拠が付くまで0件として扱います。
+
 ## Funnel記録
 
 営業funnelは `service_page_viewed`、`sample_manifest_opened`、`bootstrap_inquiry_started`、`qualified_inquiry`、`pilot_booked`、`paid_pilot` を別状態として扱います。個人情報、token、model内容はfunnel eventへ送信しません。公開後60日のKPIはIssue #2で実測値だけを追記します。
