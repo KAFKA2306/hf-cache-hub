@@ -42,7 +42,33 @@ credentialは `models.yaml`、`cache-manifest.json`、Git、営業analyticsへ�
 
 ## Funnel記録
 
-営業funnelは `service_page_viewed`、`sample_manifest_opened`、`bootstrap_inquiry_started`、`qualified_inquiry`、`pilot_booked`、`paid_pilot` を別状態として扱います。個人情報、token、model内容はfunnel eventへ送信しません。公開後60日のKPIはIssue #2で実測値だけを追記します。
+`data/service-funnel.json` をservice funnelの正準台帳とします。イベント種別は次の6つだけです。
+
+- `service_page_viewed`
+- `sample_manifest_opened`
+- `bootstrap_inquiry_started`
+- `qualified_inquiry`
+- `pilot_booked`
+- `paid_pilot`
+
+台帳は `repository_recorded_evidence_only` です。現時点でWebアクセス解析は接続していないため `traffic_measurement=not_instrumented` とし、ledger上の0件を「実アクセス0」と解釈しません。商談系は `commercial_measurement=evidence_only` とし、`qualified_inquiry`、`pilot_booked`、`paid_pilot` はHTTPSの証拠URLなしでは記録できません。
+
+個人名、メール、電話、住所、Hugging Face token、API key、model名・model内容・repository IDはfunnel eventへ保存しません。記録可能なfieldは `event_id`、`event_type`、`occurred_at`、`channel`、`evidence_url` だけです。
+
+検証と集計:
+
+```bash
+task service:funnel-audit
+```
+
+または:
+
+```bash
+python scripts/service_funnel.py validate
+python scripts/service_funnel.py summary
+```
+
+`summary` の件数は「repositoryへ証拠付きで記録されたevent数」であり、実トラフィック全体や実市場需要の推計ではありません。公開後60日のKPIはこの台帳とIssue #2の証拠から集計し、未計装の指標を0へ変換しません。
 
 ## 問い合わせ
 
