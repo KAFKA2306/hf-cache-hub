@@ -53,3 +53,9 @@ tasks:
     cmds:
       - mkdir -p models
       - find models -xtype l -delete
+
+  service:funnel-audit:
+    desc: "Validate the privacy-safe service funnel ledger and show observed evidence counts"
+    cmds:
+      - uv run python scripts/service_funnel.py validate
+      - uv run python scripts/service_funnel.py summary

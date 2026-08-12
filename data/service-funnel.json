@@ -1,0 +1,7 @@
+{
+  "schema_version": "kafka.hf-cache-hub.service-funnel.v1",
+  "measurement_scope": "repository_recorded_evidence_only",
+  "traffic_measurement": "not_instrumented",
+  "commercial_measurement": "evidence_only",
+  "events": []
+}
