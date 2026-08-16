@@ -54,6 +54,11 @@ tasks:
       - mkdir -p models
       - find models -xtype l -delete
 
+  video:generate:
+    desc: "Generate video from a pinned local model snapshot; pass args after --"
+    cmds:
+      - uv run python scripts/generate_video.py {{.CLI_ARGS}}
+
   service:funnel-audit:
     desc: "Validate the privacy-safe service funnel ledger and show observed evidence counts"
     cmds:
