@@ -6,3 +6,10 @@ models:
     access: PUBLIC
     license_url: https://www.apache.org/licenses/LICENSE-2.0
     model_card_url: https://huggingface.co/Tongyi-MAI/Z-Image-Turbo
+  - org: MiniMaxAI
+    repo: MiniMax-H3
+    revision: 42ed227ee7df40d41602854ae760620d6eb651fe
+    purpose: video-generation
+    access: PUBLIC
+    license_url: https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/42ed227ee7df40d41602854ae760620d6eb651fe/LICENSE
+    model_card_url: https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/42ed227ee7df40d41602854ae760620d6eb651fe/README.md
