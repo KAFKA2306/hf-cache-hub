@@ -1,7 +1,6 @@
 # hf-cache-hub
 
-[![Model registry integrity](https://github.com/KAFKA2306/hf-cache-hub/actions/workflows/model-registry-integrity.yml/badge.svg)](https://github.com/KAFKA2306/hf-cache-hub/actions/workflows/model-registry-integrity.yml)
-[![Pinned cache contract](https://github.com/KAFKA2306/hf-cache-hub/actions/workflows/pinned-cache.yml/badge.svg)](https://github.com/KAFKA2306/hf-cache-hub/actions/workflows/pinned-cache.yml)
+[![CI](https://github.com/KAFKA2306/hf-cache-hub/actions/workflows/pinned-cache.yml/badge.svg)](https://github.com/KAFKA2306/hf-cache-hub/actions/workflows/pinned-cache.yml)
 
 Hugging Face modelをrevision固定で共有cacheへ配置し、複数projectから同一snapshotを参照するための小さなbootstrap utilityです。
 
