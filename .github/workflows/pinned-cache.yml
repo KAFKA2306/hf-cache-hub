@@ -37,7 +37,7 @@ jobs:
           python scripts/service_funnel.py validate
           python scripts/service_funnel.py summary
       - name: Upload model registry audit
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: model-registry-audit
           path: build/model-registry-audit.json
