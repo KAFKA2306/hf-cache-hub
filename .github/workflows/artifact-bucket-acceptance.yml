@@ -1,0 +1,67 @@
+name: Artifact Storage Bucket acceptance
+
+on:
+  push:
+    branches: [issue-13-real-bucket-acceptance]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  round-trip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      HF_BUCKET: k4fka/kafka-data-lake
+      HF_OIDC_RESOURCE: buckets/k4fka/kafka-data-lake
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Install Hugging Face CLI
+        run: |
+          set -euo pipefail
+          curl -LsSf https://hf.co/cli/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Generate deterministic 100 MiB artifact
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          out = Path('/tmp/hf-cache-hub-100m.bin')
+          chunk = bytes(range(256)) * 4096
+          with out.open('wb') as f:
+              for _ in range(100):
+                  f.write(chunk)
+          assert out.stat().st_size == 100 * 1024 * 1024
+          PY
+          sha256sum /tmp/hf-cache-hub-100m.bin
+      - name: Upload, read back, verify, and clean up
+        run: |
+          set -euo pipefail
+          SRC=/tmp/hf-cache-hub-100m.bin
+          DST=/tmp/hf-cache-hub-readback.bin
+          REMOTE=".smoke/hf-cache-hub/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/artifact.bin"
+          CLEANUP_REQUIRED=0
+          cleanup() {
+            if [ "$CLEANUP_REQUIRED" = "1" ]; then
+              hf buckets rm "$HF_BUCKET/$REMOTE" --yes >/dev/null 2>&1 || true
+            fi
+          }
+          trap cleanup EXIT
+          EXPECTED_SIZE=$(stat -c%s "$SRC")
+          EXPECTED_SHA=$(sha256sum "$SRC" | awk '{print $1}')
+          hf buckets cp "$SRC" "hf://buckets/$HF_BUCKET/$REMOTE"
+          CLEANUP_REQUIRED=1
+          hf buckets cp "hf://buckets/$HF_BUCKET/$REMOTE" "$DST"
+          ACTUAL_SIZE=$(stat -c%s "$DST")
+          ACTUAL_SHA=$(sha256sum "$DST" | awk '{print $1}')
+          test "$EXPECTED_SIZE" = "$ACTUAL_SIZE"
+          test "$EXPECTED_SHA" = "$ACTUAL_SHA"
+          hf buckets rm "$HF_BUCKET/$REMOTE" --yes
+          CLEANUP_REQUIRED=0
+          echo "ARTIFACT_BUCKET_ACCEPTANCE=PASS"
+          echo "SIZE_BYTES=$ACTUAL_SIZE"
+          echo "SHA256=$ACTUAL_SHA"
