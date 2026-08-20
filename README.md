@@ -51,10 +51,26 @@ artifacts:
 検証:
 
 ```bash
-python scripts/artifact_manager.py validate --manifest artifacts.yaml
+python scripts/artifact_manager.py validate
 ```
 
 schemaはunknown fieldを拒否し、`sha256`、`size_bytes`、exact 40-character provenance revision、`source_path`または`run_id`を必須にします。token、secret、password、credential、API keyに相当するfieldはmanifestのどの階層でも拒否します。`storage.bucket` と `storage.path` は `hf://buckets/<namespace>/<bucket>/<path>` に一意に解決されます。
+
+## Artifact publish
+
+manifestに宣言済みのlocal fileをStorage Bucketへpublishする前に、local sizeとSHA-256を検証します。upload後は同じremote objectを一時fileへreadbackし、sizeとSHA-256が完全一致した場合だけ `PUBLISHED` を返します。
+
+```bash
+python scripts/artifact_manager.py publish ./output/splat.ply --id example/splat
+```
+
+remoteへ書かず計画だけ確認:
+
+```bash
+python scripts/artifact_manager.py publish ./output/splat.ply --id example/splat --dry-run
+```
+
+publish/readbackにはHugging Face公式Python APIの `batch_bucket_files` と `download_bucket_files` を使用します。認証情報は引数・manifest・result JSONへ保存せず、Hugging Faceの既存credential/OIDC経路に委ねます。認証・upload・readback・hash検証のいずれかが失敗すれば非0終了し、readback不一致時はremote objectをbest effortで削除します。local artifactは自動削除しません。
 
 Hugging Face公式ではStorage BucketsはGit historyを持たないmutable object storageで、checkpoint、logs、intermediate artifacts等のlarge working data向けです。versioned model/dataset repositoryとは責務を分離します。
 

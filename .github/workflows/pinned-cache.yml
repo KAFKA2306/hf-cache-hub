@@ -31,7 +31,7 @@ jobs:
       - name: Validate model registry
         run: python scripts/validate_models.py models.yaml --report build/model-registry-audit.json
       - name: Validate artifact manifest
-        run: python scripts/artifact_manager.py validate --manifest artifacts.yaml
+        run: python scripts/artifact_manager.py --manifest artifacts.yaml validate
       - name: Validate cache plan without downloading
         run: python scripts/cache_manager.py plan
       - name: Validate service funnel ledger
