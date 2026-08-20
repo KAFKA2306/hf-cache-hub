@@ -23,6 +23,22 @@ Run:
 python -m unittest tests.test_artifact_acceptance_e2e -v
 ```
 
+Observed in GitHub Actions CI run #19 on 2026-08-20:
+
+- status: `PASS_LOCAL_SYNTHETIC`
+- artifact size: `104857600` bytes
+- SHA-256: `4cbf988462cc3ba2e10e3aae9f5268546aa79016359fb45be7dd199c073125c0`
+- producer `.git`: `28676` bytes
+- consumer A `.git`: `28378` bytes
+- consumer B `.git`: `28378` bytes
+- fake remote download calls: `1`
+- first resolve transferred bytes: `104857600`
+- second resolve transferred bytes: `0`
+- second resolve cache hit: `true`
+- all 41 repository tests passed
+
+The shared cache path emitted by CI is intentionally ephemeral runner state and is not a stable machine-independent path.
+
 This is intentionally a local/CI contract test. Its fake downloader does **not** prove Hugging Face Storage Bucket upload or readback.
 
 ## Real Storage Bucket acceptance
@@ -71,7 +87,7 @@ The producer integration and consumer capability are implemented, but the canoni
 | AutoPhotogrammetry producer integration | PASS_CODE | AutoPhotogrammetry PR #61, Test run #98 |
 | vrmine artifact consumer capability | PASS_CODE | vrmine PR #129, 3DGS contracts run #65 |
 | Canonical vrmine registry migration | BLOCKED_REMOTE_BYTES | keep current source authority until publish/readback exists |
-| Synthetic 100 MiB multi-repository acceptance | CI_TEST_ADDED | this document + `tests/test_artifact_acceptance_e2e.py`; require green CI before marking PASS |
+| Synthetic 100 MiB multi-repository acceptance | PASS_LOCAL_SYNTHETIC | hf-cache-hub PR #21, CI run #19; 104857600 bytes first transfer, 0 bytes second transfer, cache hit true |
 | Real Gaussian Splat end-to-end | NOT_OBSERVED | requires real Bucket publication/readback first |
 
 ## Pass rule
