@@ -54,6 +54,16 @@ tasks:
       - mkdir -p models
       - find models -xtype l -delete
 
+  artifact:validate:
+    desc: "Validate the generated-artifact manifest"
+    cmds:
+      - uv run python scripts/artifact_manager.py validate
+
+  artifact:publish:
+    desc: "Publish one declared artifact and verify remote readback; pass PATH --id ID after --"
+    cmds:
+      - uv run python scripts/artifact_manager.py publish {{.CLI_ARGS}}
+
   video:generate:
     desc: "Generate video from a pinned local model snapshot; pass args after --"
     cmds:
