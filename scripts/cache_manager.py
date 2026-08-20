@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Revision-pinned Hugging Face cache planner and synchronizer."""
+"""Revision-pinned Hugging Face cache planner, synchronizer, and resolver."""
 from __future__ import annotations
 
 import argparse
@@ -69,9 +69,13 @@ def load_registry(path: Path) -> list[ModelSpec]:
             if not item[field].startswith("https://"):
                 raise RegistryError(f"models[{index}].{field} must use https://")
         spec = ModelSpec(
-            org=item["org"].strip(), repo=item["repo"].strip(), revision=revision,
-            purpose=item["purpose"].strip(), access=access,
-            license_url=item["license_url"].strip(), model_card_url=item["model_card_url"].strip(),
+            org=item["org"].strip(),
+            repo=item["repo"].strip(),
+            revision=revision,
+            purpose=item["purpose"].strip(),
+            access=access,
+            license_url=item["license_url"].strip(),
+            model_card_url=item["model_card_url"].strip(),
         )
         if spec.repo_id.casefold() in seen:
             raise RegistryError(f"duplicate model: {spec.repo_id}")
@@ -80,19 +84,52 @@ def load_registry(path: Path) -> list[ModelSpec]:
     return specs
 
 
-def _resolve_snapshot(spec: ModelSpec, cache_dir: Path, *, local_only: bool, downloader: Callable[..., str]) -> Path:
+def select_model(
+    specs: list[ModelSpec], *, repo_id: str | None = None, purpose: str | None = None
+) -> ModelSpec:
+    if bool(repo_id) == bool(purpose):
+        raise RegistryError("select exactly one model with --repo-id or --purpose")
+    if repo_id:
+        matches = [spec for spec in specs if spec.repo_id.casefold() == repo_id.casefold()]
+        selector = f"repo_id={repo_id}"
+    else:
+        assert purpose is not None
+        matches = [spec for spec in specs if spec.purpose.casefold() == purpose.casefold()]
+        selector = f"purpose={purpose}"
+    if not matches:
+        raise RegistryError(f"model not found for {selector}")
+    if len(matches) != 1:
+        candidates = ", ".join(sorted(spec.repo_id for spec in matches))
+        raise RegistryError(f"model selector is ambiguous for {selector}: {candidates}")
+    return matches[0]
+
+
+def _resolve_snapshot(
+    spec: ModelSpec,
+    cache_dir: Path,
+    *,
+    local_only: bool,
+    downloader: Callable[..., str],
+) -> Path:
     if spec.access != "PUBLIC" and not get_token():
         raise RegistryError(f"authentication required for {spec.repo_id} ({spec.access})")
-    return Path(downloader(
-        repo_id=spec.repo_id,
-        revision=spec.revision,
-        cache_dir=str(cache_dir),
-        local_files_only=local_only,
-        token=True if spec.access != "PUBLIC" else None,
-    )).resolve()
+    return Path(
+        downloader(
+            repo_id=spec.repo_id,
+            revision=spec.revision,
+            cache_dir=str(cache_dir),
+            local_files_only=local_only,
+            token=True if spec.access != "PUBLIC" else None,
+        )
+    ).resolve()
 
 
-def plan_registry(specs: list[ModelSpec], cache_dir: Path, *, downloader: Callable[..., str] = snapshot_download) -> dict[str, Any]:
+def plan_registry(
+    specs: list[ModelSpec],
+    cache_dir: Path,
+    *,
+    downloader: Callable[..., str] = snapshot_download,
+) -> dict[str, Any]:
     models = []
     for spec in specs:
         status = "CACHE_MISS"
@@ -109,8 +146,12 @@ def plan_registry(specs: list[ModelSpec], cache_dir: Path, *, downloader: Callab
             status = "CACHE_HIT"
             snapshot = str(path)
         item = {
-            "repo_id": spec.repo_id, "revision": spec.revision, "access": spec.access,
-            "purpose": spec.purpose, "status": status, "download_required": status == "CACHE_MISS",
+            "repo_id": spec.repo_id,
+            "revision": spec.revision,
+            "access": spec.access,
+            "purpose": spec.purpose,
+            "status": status,
+            "download_required": status == "CACHE_MISS",
             "resolved_snapshot": snapshot,
         }
         if status == "AUTH_REQUIRED":
@@ -118,6 +159,60 @@ def plan_registry(specs: list[ModelSpec], cache_dir: Path, *, downloader: Callab
             item["download_required"] = False
         models.append(item)
     return {"schema_version": 1, "cache_root": str(cache_dir.resolve()), "models": models}
+
+
+def resolve_model(
+    spec: ModelSpec,
+    cache_dir: Path,
+    *,
+    local_only: bool = True,
+    downloader: Callable[..., str] = snapshot_download,
+) -> dict[str, Any]:
+    base: dict[str, Any] = {
+        "schema_version": 1,
+        "repo_id": spec.repo_id,
+        "revision": spec.revision,
+        "resolved_commit": spec.revision,
+        "purpose": spec.purpose,
+        "access": spec.access,
+        "cache_root": str(cache_dir.expanduser().resolve()),
+        "download_allowed": not local_only,
+    }
+    try:
+        snapshot = _resolve_snapshot(spec, cache_dir, local_only=local_only, downloader=downloader)
+    except (LocalEntryNotFoundError, FileNotFoundError) as exc:
+        return {**base, "status": "CACHE_MISS", "snapshot": None, "error": str(exc) or None}
+    except RegistryError as exc:
+        return {**base, "status": "AUTH_REQUIRED", "snapshot": None, "error": str(exc)}
+    except Exception as exc:
+        return {
+            **base,
+            "status": "FAILED",
+            "snapshot": None,
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+
+    if snapshot.name != spec.revision:
+        return {
+            **base,
+            "status": "FAILED",
+            "snapshot": str(snapshot),
+            "error": f"resolved snapshot is {snapshot.name}, expected pinned revision {spec.revision}",
+        }
+    return {**base, "status": "READY", "snapshot": str(snapshot), "error": None}
+
+
+def resolve_registry(
+    specs: list[ModelSpec],
+    cache_dir: Path,
+    *,
+    repo_id: str | None = None,
+    purpose: str | None = None,
+    local_only: bool = True,
+    downloader: Callable[..., str] = snapshot_download,
+) -> dict[str, Any]:
+    spec = select_model(specs, repo_id=repo_id, purpose=purpose)
+    return resolve_model(spec, cache_dir, local_only=local_only, downloader=downloader)
 
 
 def _atomic_symlink(snapshot: Path, target: Path) -> None:
@@ -130,7 +225,10 @@ def _atomic_symlink(snapshot: Path, target: Path) -> None:
 
 
 def sync_registry(
-    specs: list[ModelSpec], cache_dir: Path, project_root: Path, *,
+    specs: list[ModelSpec],
+    cache_dir: Path,
+    project_root: Path,
+    *,
     downloader: Callable[..., str] = snapshot_download,
     now: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
 ) -> dict[str, Any]:
@@ -153,10 +251,16 @@ def sync_registry(
             failure = f"{type(exc).__name__}: {exc}"
             failures.append(f"{spec.repo_id}: {failure}")
         entry = {
-            "repo_id": spec.repo_id, "revision": spec.revision, "resolved_commit": spec.revision,
+            "repo_id": spec.repo_id,
+            "revision": spec.revision,
+            "resolved_commit": spec.revision,
             "snapshot": str(snapshot) if snapshot else None,
-            "link": str(link_path), "status": status, "purpose": spec.purpose, "access": spec.access,
-            "license_url": spec.license_url, "model_card_url": spec.model_card_url,
+            "link": str(link_path),
+            "status": status,
+            "purpose": spec.purpose,
+            "access": spec.access,
+            "license_url": spec.license_url,
+            "model_card_url": spec.model_card_url,
         }
         if failure:
             entry["error"] = failure
@@ -168,7 +272,10 @@ def sync_registry(
         "models": entries,
     }
     out = project_root / "cache-manifest.json"
-    out.write_text(json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    out.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     if failures:
         raise RegistryError("; ".join(failures))
     return manifest
@@ -176,21 +283,52 @@ def sync_registry(
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["plan", "sync"])
+    parser.add_argument("command", choices=["plan", "sync", "resolve"])
     parser.add_argument("--registry", type=Path, default=Path("models.yaml"))
     parser.add_argument("--project-root", type=Path, default=Path.cwd())
-    parser.add_argument("--cache-dir", type=Path, default=Path(os.environ.get("HF_HUB_CACHE", Path.home() / ".cache/huggingface/hub")))
+    parser.add_argument(
+        "--cache-dir",
+        type=Path,
+        default=Path(os.environ.get("HF_HUB_CACHE", Path.home() / ".cache/huggingface/hub")),
+    )
+    parser.add_argument("--repo-id")
+    parser.add_argument("--purpose")
+    parser.add_argument(
+        "--sync",
+        action="store_true",
+        help="Allow resolve to download the exact pinned snapshot when it is missing",
+    )
+    parser.add_argument(
+        "--local-only",
+        action="store_true",
+        help="Explicitly require cache-only resolution (the default for resolve)",
+    )
     args = parser.parse_args()
     try:
+        if args.sync and args.local_only:
+            raise RegistryError("--sync and --local-only are mutually exclusive")
         specs = load_registry(args.registry)
         if args.command == "plan":
-            print(json.dumps(plan_registry(specs, args.cache_dir), ensure_ascii=False, indent=2, sort_keys=True))
-        else:
-            print(json.dumps(sync_registry(specs, args.cache_dir, args.project_root), ensure_ascii=False, indent=2, sort_keys=True))
+            result = plan_registry(specs, args.cache_dir)
+            print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+            return 0
+        if args.command == "sync":
+            result = sync_registry(specs, args.cache_dir, args.project_root)
+            print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+            return 0
+
+        result = resolve_registry(
+            specs,
+            args.cache_dir,
+            repo_id=args.repo_id,
+            purpose=args.purpose,
+            local_only=not args.sync,
+        )
+        print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+        return 0 if result["status"] == "READY" else 2
     except RegistryError as exc:
         print(json.dumps({"status": "FAILED", "error": str(exc)}, ensure_ascii=False))
         return 1
-    return 0
 
 
 if __name__ == "__main__":
