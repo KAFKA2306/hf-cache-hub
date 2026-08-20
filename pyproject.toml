@@ -18,6 +18,7 @@ dependencies = [
   "diffusers @ git+https://github.com/huggingface/diffusers",
   "transformers",
   "huggingface-hub",
+  "filelock>=3.0",
   "PyYAML>=6.0",
 ]
 
