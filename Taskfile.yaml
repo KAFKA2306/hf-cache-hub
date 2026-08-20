@@ -64,6 +64,20 @@ tasks:
     cmds:
       - uv run python scripts/artifact_manager.py publish {{.CLI_ARGS}}
 
+  artifact:plan:
+    desc: "Report HIT, MISS, or CORRUPT for declared artifacts in the shared cache"
+    env:
+      HF_HOME: '{{.HF_HOME}}'
+    cmds:
+      - uv run python scripts/artifact_cache.py plan {{.CLI_ARGS}}
+
+  artifact:resolve:
+    desc: "Resolve one declared artifact by SHA-256 into the shared cache; pass --id ID after --"
+    env:
+      HF_HOME: '{{.HF_HOME}}'
+    cmds:
+      - uv run python scripts/artifact_cache.py resolve {{.CLI_ARGS}}
+
   video:generate:
     desc: "Generate video from a pinned local model snapshot; pass args after --"
     cmds:
