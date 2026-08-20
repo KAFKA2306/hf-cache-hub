@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/KAFKA2306/hf-cache-hub/actions/workflows/pinned-cache.yml/badge.svg)](https://github.com/KAFKA2306/hf-cache-hub/actions/workflows/pinned-cache.yml)
 
-Hugging Face modelをrevision固定で共有cacheへ配置し、複数projectから同一snapshotを参照するための小さなbootstrap utilityです。
+Hugging Face modelをrevision固定で共有cacheへ配置し、複数projectから同一snapshotを参照するための小さなbootstrap utilityです。生成artifactについては、Gitにlarge binaryを置かず、Storage Bucket上のobjectをhashとprovenanceで宣言するcontractも提供します。
 
 ## Shared cache
 
@@ -25,6 +25,41 @@ models:
     license_url: https://www.apache.org/licenses/LICENSE-2.0
     model_card_url: https://huggingface.co/Tongyi-MAI/Z-Image-Turbo
 ```
+
+## Artifact contract
+
+`artifacts.yaml` は生成済みlarge artifactの実体を保持しません。Storage Bucket上のobjectを `bucket + path` で指し、mutableなremote locationとは別に `size_bytes`、SHA-256、生成元repositoryのexact Git commitを保持します。
+
+```yaml
+schema_version: 1
+artifacts:
+  - id: example/splat
+    kind: gaussian-splat
+    format: ply
+    storage:
+      type: huggingface-bucket
+      bucket: KAFKA2306/artifacts
+      path: gaussian/example/splat.ply
+    size_bytes: 123456
+    sha256: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+    provenance:
+      repository: KAFKA2306/AutoPhotogrammetry
+      revision: 0123456789abcdef0123456789abcdef01234567
+      source_path: output/example/export/splat.ply
+```
+
+検証:
+
+```bash
+python scripts/artifact_manager.py validate --manifest artifacts.yaml
+```
+
+schemaはunknown fieldを拒否し、`sha256`、`size_bytes`、exact 40-character provenance revision、`source_path`または`run_id`を必須にします。token、secret、password、credential、API keyに相当するfieldはmanifestのどの階層でも拒否します。`storage.bucket` と `storage.path` は `hf://buckets/<namespace>/<bucket>/<path>` に一意に解決されます。
+
+Hugging Face公式ではStorage BucketsはGit historyを持たないmutable object storageで、checkpoint、logs、intermediate artifacts等のlarge working data向けです。versioned model/dataset repositoryとは責務を分離します。
+
+- https://huggingface.co/docs/hub/storage-buckets
+- https://huggingface.co/docs/huggingface_hub/guides/buckets
 
 ## Plan and sync
 
