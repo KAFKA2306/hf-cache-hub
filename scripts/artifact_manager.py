@@ -264,13 +264,11 @@ def publish_artifact(
     if dry_run:
         return {**base_result, "status": "PLANNED", "remote_verified": False}
 
-    upload_completed = False
+    _retry_transfer(
+        lambda: batcher(spec.storage_bucket, add=[(local_path, spec.storage_path)]),
+        sleeper=sleeper,
+    )
     try:
-        _retry_transfer(
-            lambda: batcher(spec.storage_bucket, add=[(local_path, spec.storage_path)]),
-            sleeper=sleeper,
-        )
-        upload_completed = True
         with tempfile.TemporaryDirectory(prefix="hf-cache-readback-") as temp_dir:
             readback = Path(temp_dir) / Path(spec.storage_path).name
             _retry_transfer(
@@ -283,11 +281,10 @@ def publish_artifact(
             )
             _verify_file(readback, spec, "remote readback")
     except Exception:
-        if upload_completed:
-            try:
-                batcher(spec.storage_bucket, delete=[spec.storage_path])
-            except Exception:
-                pass
+        # Storage Buckets are mutable and non-versioned; deletion is immediate and
+        # irreversible. A failed readback must therefore never delete the path,
+        # because it may have existed before this publish attempt. Consumers verify
+        # size/SHA-256 and will fail closed until a later publish repairs the object.
         raise
 
     return {**base_result, "status": "PUBLISHED", "remote_verified": True}
