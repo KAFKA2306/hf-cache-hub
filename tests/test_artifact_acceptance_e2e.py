@@ -68,7 +68,7 @@ class HeavyArtifactAcceptanceTest(unittest.TestCase):
             working = producer / "working" / "synthetic-100m.bin"
             working.parent.mkdir()
 
-            block = bytes(range(256)) * 4096  # exactly 1 MiB
+            block = bytes(range(256)) * 4096
             with working.open("wb") as stream:
                 for _ in range(100):
                     stream.write(block)
@@ -135,7 +135,8 @@ class HeavyArtifactAcceptanceTest(unittest.TestCase):
             )
             self.assertTrue(first["downloaded"])
             self.assertFalse(first["cache_hit"])
-            self.assertEqual(SYNTHETIC_SIZE, first["transferred_bytes"])
+            self.assertIsNone(first["transferred_bytes"])
+            self.assertEqual("unavailable", first["transfer_measurement"])
             self.assertEqual(digest, sha256_file(first_destination))
             self.assertEqual("", git(consumer_a, "status", "--porcelain"))
 
@@ -150,6 +151,7 @@ class HeavyArtifactAcceptanceTest(unittest.TestCase):
             self.assertFalse(second["downloaded"])
             self.assertTrue(second["cache_hit"])
             self.assertEqual(0, second["transferred_bytes"])
+            self.assertEqual("no_remote_call", second["transfer_measurement"])
             self.assertEqual(1, len(download_calls))
             self.assertEqual(first["cache_path"], second["cache_path"])
             self.assertEqual(digest, sha256_file(second_destination))

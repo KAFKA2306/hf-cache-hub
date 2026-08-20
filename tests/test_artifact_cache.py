@@ -5,7 +5,10 @@ import importlib.util
 import os
 import sys
 import tempfile
+import threading
+import time
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 MODULE_PATH = Path(__file__).parents[1] / "scripts" / "artifact_cache.py"
@@ -76,12 +79,37 @@ class ArtifactCacheTest(unittest.TestCase):
             first = m.resolve_artifact(spec, root / "cache", downloader=download, materialize=a)
             second = m.resolve_artifact(spec, root / "cache", downloader=download, materialize=b)
             self.assertTrue(first["downloaded"])
-            self.assertEqual(spec.size_bytes, first["transferred_bytes"])
+            self.assertIsNone(first["transferred_bytes"])
+            self.assertEqual("unavailable", first["transfer_measurement"])
             self.assertTrue(second["cache_hit"])
             self.assertEqual(0, second["transferred_bytes"])
+            self.assertEqual("no_remote_call", second["transfer_measurement"])
             self.assertEqual(1, len(calls))
             self.assertEqual(m.cache_path(spec, root / "cache").resolve(), a.resolve())
             self.assertEqual(a.resolve(), b.resolve())
+
+    def test_concurrent_resolves_download_same_sha_once(self):
+        payload = b"concurrent-payload"
+        spec = artifact(payload)
+        calls = 0
+        calls_lock = threading.Lock()
+
+        def download(bucket, *, files, raise_on_missing_files):
+            nonlocal calls
+            with calls_lock:
+                calls += 1
+            time.sleep(0.05)
+            Path(files[0][1]).write_bytes(payload)
+
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "cache"
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                results = list(executor.map(lambda _: m.resolve_artifact(spec, root, downloader=download), range(2)))
+            self.assertEqual(1, calls)
+            self.assertEqual(1, sum(result["downloaded"] for result in results))
+            self.assertEqual(1, sum(result["cache_hit"] for result in results))
+            self.assertTrue(m.cache_lock_path(spec, root).is_file())
+            self.assertEqual(payload, m.cache_path(spec, root).read_bytes())
 
     def test_corrupt_cache_is_replaced(self):
         payload = b"correct"

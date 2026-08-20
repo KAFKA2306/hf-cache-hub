@@ -90,18 +90,18 @@ class ArtifactPublishTest(unittest.TestCase):
             with self.assertRaises(m.ArtifactManifestError):
                 m.publish_artifact(spec, local, batcher=lambda *a, **k: self.fail("upload called"))
 
-    def test_readback_mismatch_cleans_remote_and_keeps_local(self):
+    def test_readback_mismatch_never_deletes_remote_and_keeps_local(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             local = root / "artifact.bin"
             payload = b"expected"
             local.write_bytes(payload)
             spec = make_spec(payload)
-            deleted = []
+            deletes = []
 
             def batcher(bucket, *, add=None, delete=None):
                 if delete:
-                    deleted.extend(delete)
+                    deletes.extend(delete)
 
             def downloader(bucket, files, raise_on_missing_files=False):
                 for _, destination in files:
@@ -109,7 +109,7 @@ class ArtifactPublishTest(unittest.TestCase):
 
             with self.assertRaises(m.ArtifactManifestError):
                 m.publish_artifact(spec, local, batcher=batcher, downloader=downloader)
-            self.assertEqual([spec.storage_path], deleted)
+            self.assertEqual([], deletes)
             self.assertEqual(payload, local.read_bytes())
 
     def test_non_transient_error_is_not_retried(self):

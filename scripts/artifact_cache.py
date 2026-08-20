@@ -12,6 +12,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Callable
 
+from filelock import FileLock
 from huggingface_hub import download_bucket_files
 from huggingface_hub.errors import HfHubHTTPError
 
@@ -36,6 +37,10 @@ def default_cache_root() -> Path:
 
 def cache_path(spec: ArtifactSpec, cache_root: Path) -> Path:
     return cache_root / "sha256" / spec.sha256 / Path(spec.storage_path).name
+
+
+def cache_lock_path(spec: ArtifactSpec, cache_root: Path) -> Path:
+    return cache_root / ".locks" / "artifacts" / f"{spec.sha256}.lock"
 
 
 def cache_state(spec: ArtifactSpec, cache_root: Path) -> str:
@@ -74,29 +79,36 @@ def resolve_artifact(
 ) -> dict[str, Any]:
     cache_root = cache_root.expanduser().resolve()
     target = cache_path(spec, cache_root)
-    state = cache_state(spec, cache_root)
     downloaded = False
 
-    if state == "CORRUPT":
-        target.unlink()
-        state = "MISS"
+    state = cache_state(spec, cache_root)
+    if state != "HIT":
+        lock_path = cache_lock_path(spec, cache_root)
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        with FileLock(str(lock_path)):
+            # Another process may have completed the same SHA while this process
+            # waited for the lock, so the cache must be checked again inside it.
+            state = cache_state(spec, cache_root)
+            if state == "CORRUPT":
+                target.unlink()
+                state = "MISS"
 
-    if state == "MISS":
-        target.parent.mkdir(parents=True, exist_ok=True)
-        temporary = target.with_name(f".{target.name}.{uuid.uuid4().hex}.part")
-        try:
-            downloader(
-                spec.storage_bucket,
-                files=[(spec.storage_path, temporary)],
-                raise_on_missing_files=True,
-            )
-            verify_file(temporary, spec, "downloaded artifact")
-            os.replace(temporary, target)
-            downloaded = True
-        except Exception:
-            if temporary.exists():
-                temporary.unlink()
-            raise
+            if state == "MISS":
+                target.parent.mkdir(parents=True, exist_ok=True)
+                temporary = target.with_name(f".{target.name}.{uuid.uuid4().hex}.part")
+                try:
+                    downloader(
+                        spec.storage_bucket,
+                        files=[(spec.storage_path, temporary)],
+                        raise_on_missing_files=True,
+                    )
+                    verify_file(temporary, spec, "downloaded artifact")
+                    os.replace(temporary, target)
+                    downloaded = True
+                except Exception:
+                    if temporary.exists():
+                        temporary.unlink()
+                    raise
 
     verify_file(target, spec, "cached artifact")
     materialized_path = None
@@ -114,7 +126,12 @@ def resolve_artifact(
         "cache_state": "MISS" if downloaded else "HIT",
         "cache_hit": not downloaded,
         "downloaded": downloaded,
-        "transferred_bytes": spec.size_bytes if downloaded else 0,
+        # Storage Buckets are backed by Xet chunk-level deduplication. The logical
+        # file size is therefore not a measurement of network bytes transferred.
+        # A cache hit makes zero remote calls; a miss is reported as unknown unless
+        # a future transport exposes an actual byte counter.
+        "transferred_bytes": None if downloaded else 0,
+        "transfer_measurement": "unavailable" if downloaded else "no_remote_call",
         "cache_path": str(target),
         "remote_uri": spec.remote_uri,
         "size_bytes": spec.size_bytes,
