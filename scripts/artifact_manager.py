@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
-"""Validate declarative manifests for generated artifacts stored outside Git."""
+"""Validate and publish generated artifacts stored outside Git."""
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
+import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import yaml
+from huggingface_hub import batch_bucket_files, download_bucket_files
+from huggingface_hub.errors import HfHubHTTPError
 
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
@@ -19,6 +24,7 @@ SECRET_FIELD_RE = re.compile(r"(?:^|_)(?:token|secret|password|credential|api_ke
 
 KINDS = {"gaussian-splat", "checkpoint", "render", "video", "dataset"}
 STORAGE_TYPE = "huggingface-bucket"
+TRANSIENT_HTTP_STATUS = {408, 425, 429, 500, 502, 503, 504}
 
 
 class ArtifactManifestError(ValueError):
@@ -182,6 +188,111 @@ def load_artifact_manifest(path: Path) -> list[ArtifactSpec]:
     return specs
 
 
+def find_artifact(specs: list[ArtifactSpec], artifact_id: str) -> ArtifactSpec:
+    matches = [spec for spec in specs if spec.id == artifact_id]
+    if len(matches) != 1:
+        raise ArtifactManifestError(f"artifact id not found: {artifact_id}")
+    return matches[0]
+
+
+def _sha256_file(path: Path, chunk_size: int = 1024 * 1024) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(chunk_size), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _verify_file(path: Path, spec: ArtifactSpec, label: str) -> None:
+    if not path.is_file():
+        raise ArtifactManifestError(f"{label} is not a file: {path}")
+    actual_size = path.stat().st_size
+    if actual_size != spec.size_bytes:
+        raise ArtifactManifestError(
+            f"{label} size mismatch for {spec.id}: expected {spec.size_bytes}, got {actual_size}"
+        )
+    actual_sha = _sha256_file(path)
+    if actual_sha != spec.sha256:
+        raise ArtifactManifestError(
+            f"{label} sha256 mismatch for {spec.id}: expected {spec.sha256}, got {actual_sha}"
+        )
+
+
+def _is_transient(exc: Exception) -> bool:
+    if isinstance(exc, (TimeoutError, ConnectionError)):
+        return True
+    if isinstance(exc, HfHubHTTPError) and exc.response is not None:
+        return exc.response.status_code in TRANSIENT_HTTP_STATUS
+    return False
+
+
+def _retry_transfer(
+    operation: Callable[[], None],
+    *,
+    attempts: int = 3,
+    sleeper: Callable[[float], None] = time.sleep,
+) -> None:
+    for attempt in range(1, attempts + 1):
+        try:
+            operation()
+            return
+        except Exception as exc:
+            if attempt == attempts or not _is_transient(exc):
+                raise
+            sleeper(float(attempt))
+
+
+def publish_artifact(
+    spec: ArtifactSpec,
+    local_path: Path,
+    *,
+    dry_run: bool = False,
+    batcher: Callable[..., Any] = batch_bucket_files,
+    downloader: Callable[..., Any] = download_bucket_files,
+    sleeper: Callable[[float], None] = time.sleep,
+) -> dict[str, Any]:
+    local_path = local_path.resolve()
+    _verify_file(local_path, spec, "local artifact")
+    base_result = {
+        "schema_version": 1,
+        "artifact_id": spec.id,
+        "remote_uri": spec.remote_uri,
+        "size_bytes": spec.size_bytes,
+        "sha256": spec.sha256,
+        "local_path": str(local_path),
+    }
+    if dry_run:
+        return {**base_result, "status": "PLANNED", "remote_verified": False}
+
+    upload_completed = False
+    try:
+        _retry_transfer(
+            lambda: batcher(spec.storage_bucket, add=[(local_path, spec.storage_path)]),
+            sleeper=sleeper,
+        )
+        upload_completed = True
+        with tempfile.TemporaryDirectory(prefix="hf-cache-readback-") as temp_dir:
+            readback = Path(temp_dir) / Path(spec.storage_path).name
+            _retry_transfer(
+                lambda: downloader(
+                    spec.storage_bucket,
+                    files=[(spec.storage_path, readback)],
+                    raise_on_missing_files=True,
+                ),
+                sleeper=sleeper,
+            )
+            _verify_file(readback, spec, "remote readback")
+    except Exception:
+        if upload_completed:
+            try:
+                batcher(spec.storage_bucket, delete=[spec.storage_path])
+            except Exception:
+                pass
+        raise
+
+    return {**base_result, "status": "PUBLISHED", "remote_verified": True}
+
+
 def manifest_summary(specs: list[ArtifactSpec], source: Path) -> dict[str, Any]:
     return {
         "schema_version": 1,
@@ -209,14 +320,29 @@ def manifest_summary(specs: list[ArtifactSpec], source: Path) -> dict[str, Any]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["validate"])
     parser.add_argument("--manifest", type=Path, default=Path("artifacts.yaml"))
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers.add_parser("validate")
+
+    publish = subparsers.add_parser("publish")
+    publish.add_argument("path", type=Path)
+    publish.add_argument("--id", dest="artifact_id", required=True)
+    publish.add_argument("--dry-run", action="store_true")
+
     args = parser.parse_args()
     try:
         specs = load_artifact_manifest(args.manifest)
-        print(json.dumps(manifest_summary(specs, args.manifest), ensure_ascii=False, indent=2, sort_keys=True))
-    except (ArtifactManifestError, OSError, yaml.YAMLError) as exc:
-        print(json.dumps({"status": "FAILED", "error": str(exc)}, ensure_ascii=False))
+        if args.command == "validate":
+            result = manifest_summary(specs, args.manifest)
+        else:
+            result = publish_artifact(
+                find_artifact(specs, args.artifact_id),
+                args.path,
+                dry_run=args.dry_run,
+            )
+        print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+    except (ArtifactManifestError, OSError, yaml.YAMLError, HfHubHTTPError) as exc:
+        print(json.dumps({"status": "FAILED", "error": f"{type(exc).__name__}: {exc}"}, ensure_ascii=False))
         return 1
     return 0
 
