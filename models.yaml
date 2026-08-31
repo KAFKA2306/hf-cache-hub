@@ -13,3 +13,10 @@ models:
     access: PUBLIC
     license_url: https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/42ed227ee7df40d41602854ae760620d6eb651fe/LICENSE
     model_card_url: https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/42ed227ee7df40d41602854ae760620d6eb651fe/README.md
+  - org: ornith-ai
+    repo: Ornith-1.0-9B-GGUF
+    revision: 3296bc7a404871a72ac3f1903f561459c09b5c17
+    purpose: local-agent
+    access: PUBLIC
+    license_url: https://opensource.org/license/mit
+    model_card_url: https://huggingface.co/ornith-ai/Ornith-1.0-9B-GGUF/blob/3296bc7a404871a72ac3f1903f561459c09b5c17/README.md

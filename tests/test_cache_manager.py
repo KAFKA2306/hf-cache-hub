@@ -8,6 +8,8 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
+from huggingface_hub.errors import LocalEntryNotFoundError
+
 MODULE_PATH = Path(__file__).parents[1] / "scripts" / "cache_manager.py"
 SPEC = importlib.util.spec_from_file_location("cache_manager", MODULE_PATH)
 assert SPEC and SPEC.loader
@@ -18,9 +20,9 @@ SPEC.loader.exec_module(m)
 REV = "a" * 40
 
 
-def write_registry(path: Path, *, access: str = "PUBLIC") -> None:
+def write_registry(path: Path, *, access: str = "PUBLIC", purpose: str = "test") -> None:
     path.write_text(
-        f"""models:\n  - org: example\n    repo: model\n    revision: {REV}\n    purpose: test\n    access: {access}\n    license_url: https://example.test/license\n    model_card_url: https://example.test/card\n""",
+        f"""models:\n  - org: example\n    repo: model\n    revision: {REV}\n    purpose: {purpose}\n    access: {access}\n    license_url: https://example.test/license\n    model_card_url: https://example.test/card\n""",
         encoding="utf-8",
     )
 
@@ -100,6 +102,87 @@ class CacheManagerTest(unittest.TestCase):
             rendered = json.dumps(manifest).lower()
             self.assertNotIn("hf_token", rendered)
             self.assertNotIn('"token"', rendered)
+
+    def test_resolve_by_repo_id_is_local_only_by_default(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            reg = root / "models.yaml"
+            write_registry(reg, purpose="local-agent")
+            snapshot = root / "cache/models--example--model/snapshots" / REV
+            snapshot.mkdir(parents=True)
+            calls = []
+
+            def download(**kwargs):
+                calls.append(kwargs)
+                return str(snapshot)
+
+            result = m.resolve_registry(
+                m.load_registry(reg),
+                root / "cache",
+                repo_id="example/model",
+                downloader=download,
+            )
+            self.assertEqual("READY", result["status"])
+            self.assertEqual(REV, result["resolved_commit"])
+            self.assertEqual(str(snapshot.resolve()), result["snapshot"])
+            self.assertTrue(calls[0]["local_files_only"])
+            self.assertFalse(result["download_allowed"])
+
+    def test_resolve_cache_miss_does_not_download(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            reg = root / "models.yaml"
+            write_registry(reg)
+
+            def miss(**kwargs):
+                self.assertTrue(kwargs["local_files_only"])
+                raise LocalEntryNotFoundError("missing")
+
+            result = m.resolve_registry(
+                m.load_registry(reg),
+                root / "cache",
+                repo_id="example/model",
+                downloader=miss,
+            )
+            self.assertEqual("CACHE_MISS", result["status"])
+            self.assertIsNone(result["snapshot"])
+
+    def test_resolve_sync_explicitly_allows_download(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            reg = root / "models.yaml"
+            write_registry(reg)
+            snapshot = root / "cache/models--example--model/snapshots" / REV
+            snapshot.mkdir(parents=True)
+            calls = []
+
+            def download(**kwargs):
+                calls.append(kwargs)
+                return str(snapshot)
+
+            result = m.resolve_registry(
+                m.load_registry(reg),
+                root / "cache",
+                purpose="test",
+                local_only=False,
+                downloader=download,
+            )
+            self.assertEqual("READY", result["status"])
+            self.assertFalse(calls[0]["local_files_only"])
+            self.assertTrue(result["download_allowed"])
+
+    def test_resolve_rejects_ambiguous_purpose(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            reg = root / "models.yaml"
+            write_registry(reg)
+            raw = reg.read_text()
+            reg.write_text(
+                raw
+                + f"  - org: other\n    repo: second\n    revision: {'b' * 40}\n    purpose: test\n    access: PUBLIC\n    license_url: https://example.test/license\n    model_card_url: https://example.test/card\n"
+            )
+            with self.assertRaises(m.RegistryError):
+                m.select_model(m.load_registry(reg), purpose="test")
 
 
 if __name__ == "__main__":
