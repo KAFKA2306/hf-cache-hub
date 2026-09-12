@@ -56,7 +56,7 @@ def _load_string_list(item: dict[str, Any], field: str, index: int) -> tuple[str
 
 def _validate_required_path(value: str, index: int) -> None:
     path = PurePosixPath(value)
-    if path.is_absolute() or ".." in path.parts or \\"\\" in value or value in {"", "."}:
+    if path.is_absolute() or ".." in path.parts or "\\" in value or value in {"", "."}:
         raise RegistryError(f"models[{index}].required_paths contains unsafe path: {value}")
 
 
