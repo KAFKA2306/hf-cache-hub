@@ -7,7 +7,7 @@ import argparse
 import hashlib
 import json
 import re
-from pathlib import Path
+from pathlib import PurePosixPath, Path
 from typing import Any
 
 import yaml
@@ -23,6 +23,8 @@ ALLOWED_FIELDS = {
     "access",
     "license_url",
     "model_card_url",
+    "task_families",
+    "required_paths",
 }
 
 
@@ -31,6 +33,15 @@ def _issue(code: str, message: str, index: int | None = None) -> dict[str, Any]:
     if index is not None:
         issue["index"] = index
     return issue
+
+
+def _valid_string_list(value: Any) -> bool:
+    return isinstance(value, list) and all(isinstance(item, str) and item.strip() for item in value)
+
+
+def _safe_required_path(value: str) -> bool:
+    path = PurePosixPath(value)
+    return not path.is_absolute() and ".." not in path.parts and "\\" not in value and value not in {"", "."}
 
 
 def validate_registry(data: Any, *, require_revision: bool = False) -> dict[str, Any]:
@@ -86,6 +97,22 @@ def validate_registry(data: Any, *, require_revision: bool = False) -> dict[str,
                     index,
                 )
             )
+
+        task_families = raw.get("task_families")
+        required_paths = raw.get("required_paths")
+        if task_families is not None or required_paths is not None:
+            if not _valid_string_list(task_families) or not task_families:
+                errors.append(_issue("invalid_task_families", "task_families must be a non-empty string list", index))
+            elif len(set(task_families)) != len(task_families):
+                errors.append(_issue("duplicate_task_family", "task_families must not contain duplicates", index))
+            if not _valid_string_list(required_paths) or not required_paths:
+                errors.append(_issue("invalid_required_paths", "required_paths must be a non-empty string list", index))
+            else:
+                if len(set(required_paths)) != len(required_paths):
+                    errors.append(_issue("duplicate_required_path", "required_paths must not contain duplicates", index))
+                unsafe = [value for value in required_paths if not _safe_required_path(value)]
+                if unsafe:
+                    errors.append(_issue("unsafe_required_path", f"unsafe required paths: {', '.join(unsafe)}", index))
 
         if isinstance(org, str) and isinstance(repo, str):
             model_id = f"{org}/{repo}"
