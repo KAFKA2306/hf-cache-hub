@@ -38,7 +38,7 @@ credentialは `models.yaml`、`cache-manifest.json`、Git、営業analyticsへ�
 
 `data/team-cache-prospects.json` は、AI/LLMの研究開発またはAIサービス開発を各組織の公式ページで確認できた候補だけを保存します。登録は営業実績を意味しません。初期状態は全件 `RESEARCHED_NOT_CONTACTED` とし、公開情報だけから「共有cacheが必要」「購入意向がある」「有効商談である」と推定しません。
 
-提案を実施した場合も、組織ID、状態、日付、公開可能な証拠だけを記録し、担当者氏名、個人メール、Hugging Face token、model内容は営業台帳へ保存しません。Issue #2の「直接提案10件」は、実際の送信・面談等を証明できる証拠が付くまで0件として扱います。
+提案を実施した場合も、組織ID、状態、日付、公開可能な証拠だけを記録し、担当者氏名、個人メール、Hugging Face token、model内容は営業台帳へ保存しません。営業実績は、実際の送信・面談等を証明できる公開可能な証拠が付く場合だけ件数へ含めます。
 
 ## Funnel記録
 
@@ -68,8 +68,8 @@ python scripts/service_funnel.py validate
 python scripts/service_funnel.py summary
 ```
 
-`summary` の件数は「repositoryへ証拠付きで記録されたevent数」であり、実トラフィック全体や実市場需要の推計ではありません。公開後60日のKPIはこの台帳とIssue #2の証拠から集計し、未計装の指標を0へ変換しません。
+`summary` の件数は「repositoryへ証拠付きで記録されたevent数」であり、実トラフィック全体や実市場需要の推計ではありません。公開後60日のKPIはこの台帳とGitHub上の公開可能な証拠から集計し、未計装の指標を0へ変換しません。
 
 ## 問い合わせ
 
-PoC相談は GitHub Issue #2 を利用してください: https://github.com/KAFKA2306/hf-cache-hub/issues/2
+PoC相談は GitHub の新規Issueから受け付けます: https://github.com/KAFKA2306/hf-cache-hub/issues/new
