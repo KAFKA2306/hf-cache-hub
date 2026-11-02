@@ -1,0 +1,21 @@
+schema_version: 1
+profiles:
+  - id: ornith-9b-q4
+    repo_id: ornith-ai/Ornith-1.0-9B-GGUF
+    backend: llama.cpp
+    model_file: ornith-1.0-9b-Q4_K_M.gguf
+    served_model_id: ornith-9b-q4
+    context_size: 32768
+    host: 127.0.0.1
+    port: 8080
+    extra_args:
+      - --fit
+      - "on"
+      - --fit-target
+      - "512"
+      - --flash-attn
+      - "on"
+      - --cache-type-k
+      - q8_0
+      - --cache-type-v
+      - q8_0

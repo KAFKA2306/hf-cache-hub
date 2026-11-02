@@ -21,6 +21,14 @@ tasks:
     cmds:
       - uv run python scripts/cache_manager.py sync
 
+  hf:resolve:
+    desc: "Resolve one pinned model without downloading; pass --repo-id ORG/REPO or --purpose NAME"
+    env:
+      HF_HOME: '{{.HF_HOME}}'
+      HF_HUB_CACHE: '{{.HF_HUB_CACHE}}'
+    cmds:
+      - uv run python scripts/cache_manager.py resolve {{.CLI_ARGS}}
+
   hf:auto-download:
     desc: "Compatibility alias: synchronize pinned models"
     cmds:
@@ -53,6 +61,46 @@ tasks:
     cmds:
       - mkdir -p models
       - find models -xtype l -delete
+
+  runtime:plan:
+    desc: "Resolve a local runtime profile from pinned cache without downloading"
+    env:
+      HF_HOME: '{{.HF_HOME}}'
+      HF_HUB_CACHE: '{{.HF_HUB_CACHE}}'
+    cmds:
+      - uv run python scripts/runtime_model.py plan {{.CLI_ARGS}}
+
+  runtime:prewarm:
+    desc: "Download only the exact pinned snapshot required by one runtime profile"
+    env:
+      HF_HOME: '{{.HF_HOME}}'
+      HF_HUB_CACHE: '{{.HF_HUB_CACHE}}'
+    cmds:
+      - uv run python scripts/runtime_model.py prewarm {{.CLI_ARGS}}
+
+  runtime:serve:
+    desc: "Start a pinned local llama.cpp runtime; add --sync to prewarm when missing"
+    env:
+      HF_HOME: '{{.HF_HOME}}'
+      HF_HUB_CACHE: '{{.HF_HUB_CACHE}}'
+    cmds:
+      - uv run python scripts/runtime_model.py serve {{.CLI_ARGS}}
+
+  runtime:status:
+    desc: "Report local runtime PID and llama.cpp health"
+    env:
+      HF_HOME: '{{.HF_HOME}}'
+      HF_HUB_CACHE: '{{.HF_HUB_CACHE}}'
+    cmds:
+      - uv run python scripts/runtime_model.py status {{.CLI_ARGS}}
+
+  runtime:stop:
+    desc: "Stop only the llama.cpp process owned by the selected runtime profile"
+    env:
+      HF_HOME: '{{.HF_HOME}}'
+      HF_HUB_CACHE: '{{.HF_HUB_CACHE}}'
+    cmds:
+      - uv run python scripts/runtime_model.py stop {{.CLI_ARGS}}
 
   artifact:validate:
     desc: "Validate the generated-artifact manifest"
