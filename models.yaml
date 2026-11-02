@@ -13,6 +13,26 @@ models:
     access: PUBLIC
     license_url: https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/42ed227ee7df40d41602854ae760620d6eb651fe/LICENSE
     model_card_url: https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/42ed227ee7df40d41602854ae760620d6eb651fe/README.md
+    task_families:
+      - t2va
+      - fl2va
+      - ref2va
+    required_paths:
+      - model_index.json
+      - FL2VA/model_index.json
+      - FL2VA/processor
+      - FL2VA/tokenizer
+      - FL2VA/text_encoder
+      - FL2VA/transformer
+      - FL2VA/visual_vae
+      - FL2VA/audio_vae
+      - Ref2VA/model_index.json
+      - Ref2VA/processor
+      - Ref2VA/tokenizer
+      - Ref2VA/text_encoder
+      - Ref2VA/transformer
+      - Ref2VA/visual_vae
+      - Ref2VA/audio_vae
   - org: ornith-ai
     repo: Ornith-1.0-9B-GGUF
     revision: 3296bc7a404871a72ac3f1903f561459c09b5c17
