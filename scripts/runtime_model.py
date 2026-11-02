@@ -330,7 +330,10 @@ def serve_runtime(
     )
 
     deadline = time.monotonic() + max(wait_seconds, 0)
-    while time.monotonic() <= deadline:
+    # Even with a zero-second wait, inspect the process and health endpoint once.
+    first_attempt = True
+    while first_attempt or time.monotonic() <= deadline:
+        first_attempt = False
         if process.poll() is not None:
             return {
                 **state,
